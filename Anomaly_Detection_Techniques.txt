@@ -1,0 +1,66 @@
+﻿Price Anomaly Detection
+Techniques, Trade-offs, and Recommendation
+Problem Recap
+Given a line item (part, labor, paint, admin fee) on a repair invoice, is the price unusually high relative to what it should cost for that repair, vehicle, region, and severity? This is fundamentally a numeric/tabular anomaly detection problem.
+Supervised Approaches
+1. Regression (predict expected price, flag large residuals)
+Train XGBoost / LightGBM / CatBoost to predict “expected cost” from features: part type, labor hours, vehicle make/model/age, region, damage severity, repair shop. Anomaly score = actual price minus predicted price (or ratio).
+* Pros: Directly usable — years of assessor-approved amounts already exist as the target. Interpretable via SHAP (shows why a price was flagged, e.g. “labor rate 40% above regional average”). Handles legitimate cost variation well (a Tesla bumper costs more than a Corsa bumper — the model learns this rather than falsely flagging it).
+* Cons: Needs clean historical labels; the “approved amount” may already contain adjuster bias/errors baked in, so the model can inherit past mistakes. Doesn't generalize well to totally novel repair types/parts not seen in training data.
+2. Classification (fraud/overcharge yes-no or low/medium/high risk)
+Train on historical claims where the outcome is known (claim was reduced/flagged vs. approved as-is).
+* Pros: Simple to deploy; easy to threshold into a review queue.
+* Cons: Throws away magnitude information (a 5% overcharge and a 500% overcharge get the same label). Class imbalance is typically severe, so the model tends to be conservative and miss subtle cases. Loses the “how much should this cost” number that is the actual desired output.
+Given the target is a continuous “justified reduction amount” rather than a clean binary label, regression is the better supervised fit over classification.
+Unsupervised Approaches
+1. Statistical / distributional (z-score, IQR, percentile-based)
+Compare a price against the distribution of historical prices for the same repair/vehicle/region bucket.
+* Pros: Extremely simple, fast, fully explainable (“99th percentile for this repair type in this region”), no labels needed, easy to stand up as a v1.
+* Cons: Doesn't handle multivariate interactions well (a price can look normal on labor hours alone and on parts alone, but the combination is unusual). Struggles with sparse buckets (rare vehicle models/regions with few historical examples).
+2. Isolation Forest
+Isolates anomalies by how few random splits it takes to separate a point from the rest of the data — anomalies split off faster.
+* Pros: Handles multivariate data well, no distributional assumptions, scales fine, no labels needed, fast to retrain as new data arrives.
+* Cons: Score is relative, not absolute (less direct explainability without add-ons); can be noisy with mixed categorical + continuous features unless carefully encoded.
+3. Autoencoders
+A neural net learns to reconstruct “normal” invoices; high reconstruction error indicates an anomaly.
+* Pros: Captures complex nonlinear relationships; useful with large data and many correlated features (labor + parts + paint + admin interacting).
+* Cons: Needs more data than tree-based methods to train well; less interpretable; harder to justify to a regulator or claims handler; overkill for a mostly tabular, moderate-feature-count problem.
+4. Clustering (k-means, DBSCAN, Gaussian Mixture Models)
+Group similar claims/line items; anything far from any cluster centroid, or in a very sparse cluster, is flagged.
+* Pros: Useful for finding sub-populations not previously known — e.g. a specific repair shop whose invoices consistently look different from the rest.
+* Cons: Sensitive to how distance/features are defined; doesn't scale cleanly to real-time single-invoice scoring (better suited to batch/offline analysis).
+Side-by-Side Comparison
+Technique
+	Pros
+	Cons
+	Regression (XGBoost/LightGBM)
+	Directly usable with historical claimed vs. approved data; interpretable via SHAP; handles legitimate cost variation (e.g., vehicle make/model)
+	Needs clean historical labels; may inherit past adjuster bias/errors; doesn't generalize to novel repair types
+	Classification (fraud / overcharge flag)
+	Simple to deploy; easy to threshold into a review queue
+	Loses magnitude info; severe class imbalance; discards the 'how much' signal needed for review
+	Statistical / percentile (z-score, IQR)
+	Simple, fast, fully explainable, no labels needed, quick v1
+	Misses multivariate interactions; struggles with sparse buckets (rare vehicle/region combos)
+	Isolation Forest
+	Handles multivariate data well; no distribution assumptions; no labels needed; fast to retrain
+	Relative score, less directly explainable; noisy with mixed categorical/continuous features
+	Autoencoders
+	Captures complex nonlinear relationships; good with many correlated features
+	Needs more data; less interpretable; hard to justify to regulator/handler; overkill for this feature scale
+	Clustering (k-means, DBSCAN, GMM)
+	Surfaces sub-populations (e.g., a specific repair shop's pattern); good for batch analysis
+	Sensitive to feature/distance definition; doesn't scale cleanly to real-time single-invoice scoring
+	
+
+What Tech Giants Do (Payments / Fraud Context)
+Google, Meta, and Amazon deal with a similar problem shape in ads billing fraud, payment fraud, and marketplace seller fraud. None of these companies publish their exact production systems in full, so the below is based on published research and engineering blog patterns, not verified internal architecture.
+* Amazon: published work on marketplace/payments fraud detection describes gradient-boosted trees as the primary production model, layered with rules engines for known fraud signatures, with heavy investment in feature engineering (velocity features, historical seller/buyer behavior aggregates) mattering more than model choice itself.
+* Google / Meta: engineering blogs on ads billing anomalies and payment fraud describe ensemble approaches — gradient-boosted trees or deep learning for the main score, combined with graph-based features (relationships between entities such as sellers, accounts, devices) as an additional signal, with real-time feature stores enabling scoring in milliseconds against fresh aggregated statistics.
+The consistent theme: gradient-boosted trees (XGBoost/LightGBM) as the workhorse model, not deep learning — tabular data, the need for interpretability, and retraining speed all favor trees. Deep learning/autoencoders tend to appear only with genuinely high-dimensional data (images, text embeddings, sequences), not structured invoice line items. Supervised and unsupervised methods are combined universally: supervised catches known patterns fast and cheap; unsupervised/anomaly detection catches novel patterns that haven't been labeled yet. Neither replaces the other.
+Recommendation
+Given years of historical assessor data (claimed vs. approved amounts) — a stronger asset than most fraud teams have — the recommended approach is:
+* 1. Primary model — Regression via LightGBM/XGBoost: predicts expected cost per line item; residual = anomaly score. This is the core signal, giving both explainability and magnitude for handler review.
+* 2. Secondary/backstop — Isolation Forest: run in parallel on the same feature set to catch cases where the regression model has no good prior (new vehicle models, rare repair combinations, sparse historical buckets), since it doesn't require a clean target to flag “this doesn't look like anything we've seen.”
+* 3. Simple percentile/z-score rules as a v1 fallback layer: cheap and fast to build while the ML models are trained/validated; gives claims handlers an immediately explainable flag (e.g., “labor rate exceeds 95th percentile for this region”) even before the fuller models are production-ready.
+* 4. Skip autoencoders/deep learning: the data is tabular with a moderate feature count and a working label signal, so the added complexity of neural approaches doesn't buy enough over trees to justify the interpretability cost — especially given the regulatory scrutiny UK insurers operate under.
