@@ -1,0 +1,89 @@
+1. Referral / Assignment Submission
+Used to create a new subrogation case. Typical fields include:
+
+Claim Number
+Insured Name
+Loss Date
+Jurisdiction/State
+Carrier Information
+Adverse Party Information
+Cause of Loss
+Recovery Potential
+Claim Amount / Damages
+Supporting Documents and Attachments
+
+Veritas describes this as the process for submitting subrogation assignments and pursuing recovery opportunities. [veritasclaims.com], [subroreferrals.com]
+2. Case Summary
+Provides a high-level view of the recovery file.
+Typical fields:
+
+Assignment Status
+Recovery Status
+Current Recovery Amount
+Assigned Specialist
+Key Dates
+Liability Determination
+Recovery Potential Rating
+
+Veritas states that each assignment is managed by a Subrogation and Recovery Specialist with ongoing case management and reporting. [veritasclaims.com], [veritasclaims.com]
+3. Party Information
+Tracks all involved entities.
+Typical fields:
+
+Insured Information
+Claimant Information
+Adverse Carrier
+Adverse Driver/Owner
+Attorney Information
+Contact Details
+
+The subrogation process involves coordination with adverse carriers and multiple parties. [veritasclaims.com], [veritasclaims.com]
+4. Financial / Recovery Details
+Tracks amounts being pursued and recovered.
+Typical fields:
+
+Total Claim Paid
+Deductible Amount
+Recovery Demand Amount
+Settlement Amount
+Recovered Amount
+Outstanding Balance
+Recovery Percentage
+
+Veritas emphasizes recovery opportunity review, negotiation, and recovery management throughout the claim lifecycle. [veritasclaims.com], [veritasclaims.com]
+5. Document Repository
+Stores claim-related evidence.
+Typical fields or document categories:
+
+Police Reports
+Photos
+Repair Estimates
+Invoices
+Demand Letters
+Settlement Agreements
+Correspondence
+
+Veritas highlights meticulous documentation and file review as key components of its recovery process. [veritasclaims.com], [veritasclaims.com]
+6. Notes & Activity Log
+Tracks case actions and communications.
+Typical fields:
+
+Date/Time
+User
+Activity Type
+Negotiation Notes
+Status Updates
+Follow-up Tasks
+
+Veritas references proactive communication and transparent reporting throughout recovery efforts. [veritasclaims.com]
+7. Reporting / Dashboard
+Management view of recovery performance.
+Typical metrics:
+
+Open Assignments
+Closed Assignments
+Recovery Rate
+Recovery Dollars Collected
+Aging Reports
+Specialist Workload
+Pipeline Reports
